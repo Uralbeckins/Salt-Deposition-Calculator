@@ -5,34 +5,62 @@ import pandas as pd
 import math
 import datetime
 
-# Chemistry core
+# Химические константы: молярные массы и заряды ионов
 Mr = {'Cl': 35.453, 'SO4': 96.06, 'HCO3': 61.017, 'Ca': 40.078, 'Mg': 24.305,
       'NaK': 22.99, 'Ba': 137.327, 'Sr': 87.62}
 z = {'Cl': -1, 'SO4': -2, 'HCO3': -1, 'Ca': 2, 'Mg': 2, 'NaK': 1, 'Ba': 2, 'Sr': 2}
 
+# Параметры сульфатных солей: эмпирические коэффициенты и молярные массы
 salts = {
-    'Барит': {'a': 10.147, 'b': -4.946e-3, 'c': 11.650e-6, 'd': -5.315e-5, 'e': -4.003, 'f': 2.787, 'g': -0.619, 'h': -1.850e-3, 'ion': 'Ba', 'Mr': 233.387},
-    'Целестин': {'a': 6.090, 'b': 2.237e-3, 'c': 5.739e-6, 'd': -4.197e-5, 'e': -2.082, 'f': 0.944, 'g': -8.650e-2, 'h': -1.873e-3, 'ion': 'Sr', 'Mr': 183.68},
-    'Ангидрит': {'a': 2.884, 'b': 9.327e-3, 'c': 0.188e-6, 'd': -3.400e-5, 'e': -1.994, 'f': 1.267, 'g': -0.190, 'h': -3.195e-3, 'ion': 'Ca', 'Mr': 136.138},
-    'Бассанит': {'a': 4.053, 'b': -1.792e-3, 'c': 11.400e-6, 'd': -7.070e-5, 'e': -1.734, 'f': 0.562, 'g': -2.170e-2, 'h': -6.436e-4, 'ion': 'Ca', 'Mr': 145.146},
-    'Гипс': {'a': 3.599, 'b': -0.266e-3, 'c': 9.029e-6, 'd': -5.586e-5, 'e': -0.847, 'f': 5.240e-2, 'g': 8.520e-2, 'h': -2.090e-3, 'ion': 'Ca', 'Mr': 172.153}
+    'Барит': {'a': 10.147, 'b': -4.946e-3, 'c': 11.650e-6, 'd': -5.315e-5,
+              'e': -4.003, 'f': 2.787, 'g': -0.619, 'h': -1.850e-3,
+              'ion': 'Ba', 'Mr': 233.387},
+
+    'Целестин': {'a': 6.090, 'b': 2.237e-3, 'c': 5.739e-6, 'd': -4.197e-5,
+                 'e': -2.082, 'f': 0.944, 'g': -8.650e-2, 'h': -1.873e-3,
+                 'ion': 'Sr', 'Mr': 183.68},
+
+    'Ангидрит': {'a': 2.884, 'b': 9.327e-3, 'c': 0.188e-6, 'd': -3.400e-5,
+                 'e': -1.994, 'f': 1.267, 'g': -0.190, 'h': -3.195e-3,
+                 'ion': 'Ca', 'Mr': 136.138},
+
+    'Бассанит': {'a': 4.053, 'b': -1.792e-3, 'c': 11.400e-6, 'd': -7.070e-5,
+                 'e': -1.734, 'f': 0.562, 'g': -2.170e-2, 'h': -6.436e-4,
+                 'ion': 'Ca', 'Mr': 145.146},
+
+    'Гипс': {'a': 3.599, 'b': -0.266e-3, 'c': 9.029e-6, 'd': -5.586e-5,
+             'e': -0.847, 'f': 5.240e-2, 'g': 8.520e-2, 'h': -2.090e-3,
+             'ion': 'Ca', 'Mr': 172.153}
 }
-# Helper functions
-def to_fahrenheit(T_c): return T_c * 9.0 / 5.0 + 32.0
-def to_psi(P_atm): return P_atm * 14.6959
+
+# Вспомогательные преобразования единиц
+def to_fahrenheit(T_c):
+    return T_c * 9.0 / 5.0 + 32.0
+
+def to_psi(P_atm):
+    return P_atm * 14.6959
+
+# Перевод мг/л в моль/л
 def conc_molar(mg_per_l, Mr_value):
-    # Если вход — строка, заменяем запятую на точку
+    # Обработка значений с запятой
     if isinstance(mg_per_l, str):
         mg_per_l = mg_per_l.replace(',', '.')
-    # Преобразуем к числу и вычисляем
     mg_per_l = float(mg_per_l)
     return (mg_per_l / 1000.0) / Mr_value
-def calc_I(c): return 0.5 * sum(c[i]*(z[i]**2) for i in c if i in z)
+
+# Расчет ионной силы раствора
+def calc_I(c):
+    return 0.5 * sum(c[i] * (z[i]**2) for i in c if i in z)
 
 
+# Расчёт индекса насыщения карбонатной системы (кальцит)
 def calc_SI_calcite(c, T, P, pH, GF, Q, water_c, y_CO2, X_CO2, Mroil, dens_oil):
+
+    # Перевод температуры и давления
     TB, PB = to_fahrenheit(T), to_psi(P)
     I = calc_I(c)
+
+    # Определение режима: есть газ, нет газа, либо информации недостаточно
     gas = False
     no_gas = False
     no_info = False
@@ -44,148 +72,177 @@ def calc_SI_calcite(c, T, P, pH, GF, Q, water_c, y_CO2, X_CO2, Mroil, dens_oil):
     else:
         no_info = True
 
+    # Расчёт при наличии газа
     if gas == True:
         Qj, wc, GF, yCO2_prime = float(Q), float(water_c), float(GF), float(y_CO2)
-        BWPD = Qj*wc/100*6.28981; BOPD = Qj*(100-wc)/100*6.28981
-        MMCFD = Qj*(100-wc)/100*GF*35.3147/1e6
-        tb05, pb05 = TB**0.5, PB**0.5
-        fCO2 = math.exp(-7.66e-4 + 8.0e-6*tb05 - 2.11e-9*tb05*pb05)
-        denom = 1+PB*fCO2*(5*BWPD+10*BOPD)*1e-9/((TB+460)*max(MMCFD,1e-12))
-        yCO2 = yCO2_prime/denom if denom!=0 else yCO2_prime
-        denom2 = PB*yCO2*fCO2 if PB*yCO2*fCO2!=0 else 1e-12
-        return math.log10(max(c.get('Ca',0)*c.get('HCO3',0),1e-30)/denom2)+6.039+0.014463*TB-9.44e-5*TB**2-6.185e-5*PB-1.895*I**0.5+0.662*I+0.03654*I**1.5-8e-5*TB*I**0.5
+        BWPD = Qj * wc / 100 * 6.28981
+        BOPD = Qj * (100 - wc) / 100 * 6.28981
+        MMCFD = Qj * (100 - wc) / 100 * GF * 35.3147 / 1e6
 
+        tb05, pb05 = TB**0.5, PB**0.5
+        fCO2 = math.exp(-7.66e-4 + 8.0e-6 * tb05 - 2.11e-9 * tb05 * pb05)
+
+        denom = 1 + PB * fCO2 * (5*BWPD + 10*BOPD) * 1e-9 / ((TB + 460) * max(MMCFD, 1e-12))
+        yCO2 = yCO2_prime / denom if denom != 0 else yCO2_prime
+        denom2 = PB * yCO2 * fCO2 if PB * yCO2 * fCO2 != 0 else 1e-12
+
+        return math.log10(max(c.get('Ca', 0) * c.get('HCO3', 0), 1e-30) / denom2) + \
+               6.039 + 0.014463 * TB - 9.44e-5 * TB**2 - 6.185e-5 * PB - \
+               1.895 * I**0.5 + 0.662 * I + 0.03654 * I**1.5 - 8e-5 * TB * I**0.5
+
+    # Расчёт при отсутствии газа, но с данными по нефти
     if no_gas == True:
         Qj, wc, XCO2, Mroil, rhooil = float(Q), float(water_c), float(X_CO2), float(Mroil), float(dens_oil)
-        Vw = Qj*wc/100*1000; Vo = Qj*(100-wc)/100*1000
-        nCO2 = Vo*rhooil*1000/Mroil*XCO2 if Mroil!=0 else 0
-        cCO2 = 7289*nCO2/(Vw+3.04*Vo) if (Vw+3.04*Vo)!=0 else 1e-12
-        return math.log10(max(c.get('Ca',0)*c.get('HCO3',0),1e-30)/cCO2)+3.801+0.008115*T-9.028e-6*T**2-7.419e-5*P-1.961*I**0.5+0.695*I-0.01136*I**1.5-1.604e-5*T*I**0.5
+        Vw = Qj * wc / 100 * 1000
+        Vo = Qj * (100 - wc) / 100 * 1000
+        nCO2 = Vo * rhooil * 1000 / Mroil * XCO2 if Mroil != 0 else 0
+        cCO2 = 7289 * nCO2 / (Vw + 3.04 * Vo) if (Vw + 3.04 * Vo) != 0 else 1e-12
 
+        return math.log10(max(c.get('Ca', 0) * c.get('HCO3', 0), 1e-30) / cCO2) + \
+               3.801 + 0.008115 * T - 9.028e-6 * T**2 - 7.419e-5 * P - \
+               1.961 * I**0.5 + 0.695 * I - 0.01136 * I**1.5 - 1.604e-5 * T * I**0.5
+
+    # Расчёт по упрощённой формуле при недостатке информации
     if no_info == True:
         pH = float(pH)
-        return math.log10(max(c.get('Ca',0)*c.get('HCO3',0),1e-30))+pH-2.53+0.008943*TB+1.886e-6*TB**2-4.855e-5*PB-1.470*I**0.5+0.316*I+0.0537*I**1.5+0.001297*TB*I**0.5
+        return math.log10(max(c.get('Ca', 0) * c.get('HCO3', 0), 1e-30)) + \
+               pH - 2.53 + 0.008943 * TB + 1.886e-6 * TB**2 - 4.855e-5 * PB - \
+               1.470 * I**0.5 + 0.316 * I + 0.0537 * I**1.5 + 0.001297 * TB * I**0.5
 
 
+# Индекс насыщения для сульфатных солей
 def calc_SI_sulfate(salt, c, T, P):
+
     TB, PB = to_fahrenheit(T), to_psi(P)
     I = calc_I(c)
 
-    logK_st=2.301+0.00174*TB+4.553e-6*TB**2-7.801e-6*PB-3.969*I**0.5+2.280*I-0.459*I**1.5-0.0006037*TB*I**0.5
-    K_st=10**logK_st
+    # Равновесная константа взаимодействия Ме²⁺–SO₄²⁻
+    logK_st = 2.301 + 0.00174 * TB + 4.553e-6 * TB**2 - 7.801e-6 * PB - \
+              3.969 * I**0.5 + 2.280 * I - 0.459 * I**1.5 - 0.0006037 * TB * I**0.5
+    K_st = 10**logK_st
 
-    sum_cM=c.get('Ca',0)+c.get('Mg',0)+c.get('Ba',0)+c.get('Sr',0)
-    temp=K_st*(sum_cM-c.get('SO4',0))
-    a=1+temp
-    sqrt_term=math.sqrt(max(a**2+4*K_st*c.get('SO4',0),0))
-    cSO4_free=(-a+sqrt_term)/(2*K_st) if K_st!=0 else c.get('SO4',0)
+    # Концентрации для расчёта свободного SO₄²⁻
+    sum_cM = c.get('Ca', 0) + c.get('Mg', 0) + c.get('Ba', 0) + c.get('Sr', 0)
+    temp = K_st * (sum_cM - c.get('SO4', 0))
+    a = 1 + temp
 
-    ion_name=salts[salt]['ion']
-    cM_free=c.get(ion_name,0)/(1+K_st*cSO4_free) if (1+K_st*cSO4_free)!=0 else c.get(ion_name,0)
-    coef=salts[salt]
-    logK_c=coef['a']+coef['b']*TB+coef['c']*TB**2+coef['d']*PB+coef['e']*I**0.5+coef['f']*I+coef['g']*I**1.5+coef['h']*TB*I**0.5
-    return math.log10(max(cM_free*cSO4_free, 1e-30))+logK_c
+    sqrt_term = math.sqrt(max(a**2 + 4*K_st*c.get('SO4', 0), 0))
+    cSO4_free = (-a + sqrt_term) / (2*K_st) if K_st != 0 else c.get('SO4', 0)
 
-# Max delta bisection
+    # Свободная концентрация соответствующего катиона
+    ion_name = salts[salt]['ion']
+    cM_free = c.get(ion_name, 0) / (1 + K_st*cSO4_free) if (1 + K_st*cSO4_free) != 0 else c.get(ion_name, 0)
+
+    # Расчет равновесной константы конкретной соли
+    coef = salts[salt]
+    logK_c = coef['a'] + coef['b'] * TB + coef['c'] * TB**2 + coef['d'] * PB + \
+             coef['e'] * I**0.5 + coef['f'] * I + coef['g'] * I**1.5 + coef['h'] * TB * I**0.5
+
+    return math.log10(max(cM_free * cSO4_free, 1e-30)) + logK_c
+
+
+# Максимально возможное осаждение конкретной соли (итеративный поиск)
 def get_max_dc(salt, c, T, P, pH, GF, Q, water_c, y_CO2, X_CO2, Mroil, dens_oil):
+
+    # Определяем пары ионов для соли
     cation, anion = ('Ca', 'HCO3') if salt == 'Кальцит' else (salts[salt]['ion'], 'SO4')
+
+    # Максимально возможный расход ионов
     limit = max(0, min(c.get(cation, 0), c.get(anion, 0)))
     low, high = 0.0, limit
 
+    # Начальный SI
     if salt == 'Кальцит':
         SI = calc_SI_calcite(c, T, P, pH, GF, Q, water_c, y_CO2, X_CO2, Mroil, dens_oil)
     else:
         SI = calc_SI_sulfate(salt, c, T, P)
 
-    if SI <= 0:
+    if SI is None or SI <= 0:
         return 0.0
-    
+
     i = 0
     mid = 0
 
-    # print(f'SI = {SI}')
-    while abs(SI) > 1e-6:
-        # print(f'iteration #: {i}')
-        # print(f'high = {high}')
-        # print(f'low = {low}')
+    # Двоичный поиск количества осадка
+    while SI is not None and abs(SI) > 1e-6:
 
         mid = (low + high) / 2
         new_c = c.copy()
+
         new_c[cation] = max(0, new_c.get(cation, 0) - mid)
         new_c[anion] = max(0, new_c.get(anion, 0) - mid)
-        
+
         if salt == 'Кальцит':
             SI = calc_SI_calcite(new_c, T, P, pH, GF, Q, water_c, y_CO2, X_CO2, Mroil, dens_oil)
         else:
             SI = calc_SI_sulfate(salt, new_c, T, P)
-        
-        # print(f'SI = {SI}')
-        # print()
 
-        if SI > 0:
+        if SI is not None and SI > 0:
             low = mid
         else:
             high = mid
+
         i += 1
+
     return mid
 
 
-# Main precipitation loop
+# Главный расчёт масс осадков с последовательным осаждением
 def calculate_masses(c, T, P, pH, GF, Q, water_c, y_CO2, X_CO2, Mroil, dens_oil, N_steps=1000):
-    I0 = calc_I(c)
-    TB, PB = to_fahrenheit(T), to_psi(P)
 
-    # Инициализация SI
+    # Стартовые значения SI
     SI_results = {'Кальцит': calc_SI_calcite(c, T, P, pH, GF, Q, water_c, y_CO2, X_CO2, Mroil, dens_oil)}
+
     for salt in salts:
         SI_results[salt] = calc_SI_sulfate(salt, c, T, P) if c.get('SO4', 0) > 0 else -100.0
-    # print(f'SI results: {SI_results}')
 
-    # Определяем активные соли (SI > 0)
-    active = [k for k, v in SI_results.items() if v > 0]
-    # print("Active salts for precipitation:", active)
+    # Список пересыщенных солей
+    active = [k for k, v in SI_results.items() if v is not None and v > 0]
 
-    # if not active:
-    #     return {s: 0.0 for s in ['Кальцит', *salts.keys()]}
-
-    # Инициализация
+    # Предварительное вычисление максимальных осаждений
     delta_max = {s: get_max_dc(s, c, T, P, pH, GF, Q, water_c, y_CO2, X_CO2, Mroil, dens_oil) for s in active}
     delta = {s: delta_max[s] / N_steps for s in active}
+
     precip = {s: 0.0 for s in active}
     current_c = c.copy()
 
-    # Основной цикл осаждения
+    # Основной итерационный цикл
     for _ in range(N_steps):
+
         I_step = calc_I(current_c)
         to_precipitate = []
+
+        # Выбираем соли, которые всё ещё пересыщены
         for s in active:
-            if s == 'Кальцит':
-                si = calc_SI_calcite(current_c, T, P, pH, GF, Q, water_c, y_CO2, X_CO2, Mroil, dens_oil)
-            else:
-                si = calc_SI_sulfate(s, current_c, T, P)
-            if si > 0:
+            si = calc_SI_calcite(current_c, T, P, pH, GF, Q, water_c, y_CO2, X_CO2, Mroil, dens_oil) if s == 'Кальцит' \
+                 else calc_SI_sulfate(s, current_c, T, P)
+
+            if si is not None and si > 0:
                 to_precipitate.append(s)
 
-        # Уменьшаем концентрации
+        # Реальное осаждение с проверкой доступных ионов
         for s in to_precipitate:
             cation = 'Ca' if s == 'Кальцит' else salts[s]['ion']
             anion = 'HCO3' if s == 'Кальцит' else 'SO4'
+
             d_actual = min(delta[s], current_c.get(cation, 0), current_c.get(anion, 0))
             if d_actual <= 0:
                 continue
+
             current_c[cation] -= d_actual
             current_c[anion] -= d_actual
             precip[s] += d_actual
 
-    # Массы осадков (в г/л)
+    # Перевод осаждённых количеств в г/л
     masses = {}
     sum_masses = 0
+
     for s in precip:
         mr = 100.087 if s == 'Кальцит' else salts[s]['Mr']
-        masses[s] = round((precip[s] * mr), 3)
+        masses[s] = round(precip[s] * mr, 3)
         sum_masses += masses[s]
 
-    # Добавляем нули для отсутствующих
+    # Добавляем нули для солей, которых нет в осадках
     for key in ['Кальцит', *salts.keys()]:
         masses.setdefault(key, 0.0)
 
@@ -198,9 +255,9 @@ DOWNLOADS_DIR = os.path.join(os.path.expanduser("~"), "Downloads")
 
 
 def main(page: ft.Page):
-    # -------------------------
-    # Настройка страницы
-    # -------------------------
+    # =============================================================================
+    # НАСТРОЙКА СТРАНИЦЫ
+    # =============================================================================
     table = None
     page.title = "Калькулятор осаждения солей"
     page.padding = 20
@@ -210,29 +267,29 @@ def main(page: ft.Page):
     page.scroll = ft.ScrollMode.AUTO
     page.window.maximized = True
 
-    # -------------------------
-    # Файловый выбор
-    # -------------------------
+    # =============================================================================
+    # ФАЙЛОВЫЙ ВЫБОР
+    # =============================================================================
     file_picker = ft.FilePicker()
     page.overlay.append(file_picker)
 
-    # -------------------------
-    # Ввод параметров: Температура, Давление, pH
-    # -------------------------
+    # =============================================================================
+    # ВВОД ПАРАМЕТРОВ: ТЕМПЕРАТУРА, ДАВЛЕНИЕ, pH
+    # =============================================================================
     temp_input = ft.TextField(label="Температура, °C", label_style=ft.TextStyle(size=18), value="60", width=200)
     press_input = ft.TextField(label="Давление, атм", label_style=ft.TextStyle(size=18), value="30", width=200)
     ph_input = ft.TextField(label="pH", label_style=ft.TextStyle(size=18), value="7.42", width=200)
     
-    # -------------------------
-    # Параметры скважины
-    # -------------------------
+    # =============================================================================
+    # ПАРАМЕТРЫ СКВАЖИНЫ
+    # =============================================================================
     Q_input = ft.TextField(label="Дебит жидкости, м³/сут", label_style=ft.TextStyle(size=18), value="0", width=200)
     water_input = ft.TextField(label="Обводненность, %", label_style=ft.TextStyle(size=18), value="0", width=200)
     gas_input = ft.TextField(label="Газовый фактор, м³/м³", label_style=ft.TextStyle(size=18), value="0", width=200)
 
-    # -------------------------
-    # Ионный состав воды
-    # -------------------------
+    # =============================================================================
+    # ИОННЫЙ СОСТАВ ВОДЫ
+    # =============================================================================
     cl_input = ft.TextField(label="Cl⁻, мг/л", label_style=ft.TextStyle(size=18), value="11838.8", width=200)
     so4_input = ft.TextField(label="SO₄²⁻, мг/л", label_style=ft.TextStyle(size=18), value="122", width=200)
     hco3_input = ft.TextField(label="HCO₃⁻, мг/л", label_style=ft.TextStyle(size=18), value="164.7", width=200)
@@ -242,22 +299,22 @@ def main(page: ft.Page):
     ba_input = ft.TextField(label="Ba²⁺, мг/л", label_style=ft.TextStyle(size=18), value="1000", width=200)
     sr_input = ft.TextField(label="Sr²⁺, мг/л", label_style=ft.TextStyle(size=18), value="102", width=200)
 
-    # -------------------------
-    # Нефть и CO2
-    # -------------------------
+    # =============================================================================
+    # НЕФТЬ И CO2
+    # =============================================================================
     oil_density_input = ft.TextField(label="Плотность нефти, кг/м³", label_style=ft.TextStyle(size=18), value="0", width=200)
     oil_mr_input = ft.TextField(label="Средняя молекулярная масса пластовой нефти, г/моль", label_style=ft.TextStyle(size=18), value="0", width=450)
     co2_in_gas_input = ft.TextField(label="Мольная доля CO₂ в газовой фазе", label_style=ft.TextStyle(size=18), value="0", width=300)
     co2_in_oil_input = ft.TextField(label="Мольная доля CO₂ в пластовой нефти", label_style=ft.TextStyle(size=18), value="0", width=300)
     
-    # -------------------------
-    # Колонка для вывода результатов
-    # -------------------------
+    # =============================================================================
+    # КОЛОНКА ДЛЯ ВЫВОДА РЕЗУЛЬТАТОВ
+    # =============================================================================
     results_column = ft.Column([], spacing=10, horizontal_alignment=ft.CrossAxisAlignment.START)
 
-    # -------------------------
-    # Обязательные поля
-    # -------------------------
+    # =============================================================================
+    # ОБЯЗАТЕЛЬНЫЕ ПОЛЯ
+    # =============================================================================
     required_fields = [temp_input, press_input, ph_input, ca_input, cl_input, so4_input, hco3_input, mg_input, nak_input, ba_input, sr_input]
 
     def on_field_change(e):
@@ -271,9 +328,9 @@ def main(page: ft.Page):
     for f in required_fields:
         f.on_change = on_field_change
 
-    # -------------------------
-    # Нормализация числовых полей (замена ',' на '.')
-    # -------------------------
+    # =============================================================================
+    # НОРМАЛИЗАЦИЯ ЧИСЛОВЫХ ПОЛЕЙ (ЗАМЕНА ',' НА '.')
+    # =============================================================================
     numeric_fields = [
         temp_input, press_input, ph_input,
         Q_input, water_input, gas_input,
@@ -290,9 +347,9 @@ def main(page: ft.Page):
     for f in numeric_fields:
         f.on_change = normalize_input
 
-    # -------------------------
-    # Функция расчета при нажатии кнопки
-    # -------------------------
+    # =============================================================================
+    # ФУНКЦИЯ РАСЧЕТА ПРИ НАЖАТИИ КНОПКИ
+    # =============================================================================
     def calculate_click(e):
         try:
             # Проверка обязательных полей
@@ -390,7 +447,9 @@ def main(page: ft.Page):
             sb.open = True
             page.update()
 
-
+    # =============================================================================
+    # СМЕНА ТЕМЫ
+    # =============================================================================
     def toggle_theme(e):
         global nav_color 
         if page.theme_mode == ft.ThemeMode.LIGHT:
@@ -408,13 +467,16 @@ def main(page: ft.Page):
 
         page.update()
 
+    # Кнопка для смены темы
     theme_btn = ft.IconButton(
                     icon = ft.Icons.DARK_MODE,
                     on_click = toggle_theme,
                     tooltip='Сменить тему'
-                )    # -------------------------
-    # Функции для страницы ручного ввода
-    # -------------------------
+                )
+
+    # =============================================================================
+    # ФУНКЦИИ ДЛЯ СТРАНИЦЫ РУЧНОГО ВВОДА
+    # =============================================================================
     def home_page():
         return ft.Container(
             content=ft.Column([
@@ -482,15 +544,16 @@ def main(page: ft.Page):
                     padding=10,
                     alignment=ft.alignment.center
                 ),
+
                 # Результаты
                 results_column
             ]),
             padding=20,
         )
 
-    # -------------------------
-    # Функция для создания файла Шаблона
-    # -------------------------
+    # =============================================================================
+    # ФУНКЦИЯ ДЛЯ СОЗДАНИЯ ФАЙЛА ШАБЛОНА
+    # =============================================================================
     def create_template(e):
         columns = [
             "№", "Скважина", "Дата отбора",
@@ -521,9 +584,9 @@ def main(page: ft.Page):
         )
     )
 
-    # -------------------------
-    # Функция для отображения предпросмотра результатов в виде таблицы
-    # -------------------------
+    # =============================================================================
+    # ФУНКЦИЯ ДЛЯ ОТОБРАЖЕНИЯ ПРЕДПРОСМОТРА РЕЗУЛЬТАТОВ В ВИДЕ ТАБЛИЦЫ
+    # =============================================================================
     def show_result_preview(df_results):
         nonlocal preview_container
 
@@ -581,11 +644,10 @@ def main(page: ft.Page):
         page.update()
         page.open(ft.SnackBar(ft.Text(f"* Ваш файл появился в папке \"Загрузки\""), bgcolor=ft.Colors.GREEN, duration=20000))
 
-
+    # =========================================================================
+    # СБРОС КОНТЕЙНЕРА ПРЕДПРОСМОТРА
+    # =========================================================================
     def clear_all(e):
-        # -------------------------
-        # Сбрасываем контейнер предпросмотра
-        # -------------------------
         preview_container.content = ft.Text(
             "Здесь появится таблица c результатами расчета",
             size=20,
@@ -603,14 +665,9 @@ def main(page: ft.Page):
                     bgcolor=ft.Colors.GREY
                 )
 
-        # -------------------------
-        # Сбрасываем результаты Excel (если есть)
-        # -------------------------
         results_column.controls.clear()
 
         page.update()
-
-
 
     preview_container=ft.Container(
                         content=ft.Text("Здесь появится таблица c результатами расчета", size=20, color=ft.Colors.GREY),
@@ -623,9 +680,10 @@ def main(page: ft.Page):
                         expand=False
                                 )
     result_df = None
-    # -------------------------
-    # Функция для обработки файла Excel и сохранения результатов
-    # -------------------------
+
+    # =============================================================================
+    # ФУНКЦИЯ ДЛЯ ОБРАБОТКИ ФАЙЛА EXCEL И СОХРАНЕНИЯ РЕЗУЛЬТАТОВ
+    # =============================================================================
     def process_file(e: ft.FilePickerResultEvent):
         nonlocal result_df
         global last_result_path
@@ -674,15 +732,10 @@ def main(page: ft.Page):
                 result_df = pd.DataFrame(results)
                 last_result_path = os.path.join(DOWNLOADS_DIR, f"Результат_{f.name}")
                 result_df.to_excel(last_result_path, index=False)
-                # if not result_df.empty:
-                    # show_data_table_excel(result_df[['№', 'Скважина','Кальцит', 'Барит',
-                    #                                 'Целестин', 'Ангидрит', 'Бассанит', 'Гипс',
-                    #                                 'Общая масса солей']])
-                # else:
-                #     page.open(ft.SnackBar(ft.Text(f"Файл {f.name} не содержит данных для расчета."), bgcolor=ft.Colors.RED, duration=8000))
                 
                 calculate_excel_btn.disabled = False
-                # Guard against None and capture the current DataFrame in the lambda default
+
+                # Защита от нажатия, если нет результатов
                 if result_df is not None:
                     calculate_excel_btn.on_click = lambda _, df=result_df: show_result_preview(df[['№', 'Скважина','Кальцит', 'Барит',
                                                         'Целестин', 'Ангидрит', 'Бассанит', 'Гипс',
@@ -698,6 +751,7 @@ def main(page: ft.Page):
 
     file_picker.on_result = process_file
     
+    # Функция для отображения предпросмотра импортированного Excel файла
     def show_preview_excel(df: pd.DataFrame):
         # Берем первые 5 строк
         num_rows = max(1, 5)
@@ -727,7 +781,7 @@ def main(page: ft.Page):
                         if pd.isna(val):
                             cell_text = ''
                         else:
-                            # Try to convert numeric values to rounded integers for preview
+                            # Попытка преобразовать числовые значения в округленные целые для предпросмотра
                             try:
                                 cell_text = str(int(round(float(val), 0)))
                             except Exception:
@@ -747,13 +801,8 @@ def main(page: ft.Page):
             column_spacing=20,
         )
         
-        # Compute a width for the table so it can overflow horizontally
         table_width = max(1000, 140 * len(df_preview.columns))
-        
-        # Ensure preview container is slightly narrower than the table so horizontal scrollbar appears
         preview_container.width = max(2000, table_width - 100)
-
-        # Replace preview content; put table inside a Row with horizontal scrolling
         preview_container.content = ft.Container(
             ft.Column([
                 ft.Text("Окно предпросмотра данных", size=18, weight=ft.FontWeight.BOLD),
@@ -763,9 +812,9 @@ def main(page: ft.Page):
         )
         page.update()
 
-    # -------------------------
-    # Страница Excel режима
-    # -------------------------
+    # =============================================================================
+    # СТРАНИЦА EXCEL РЕЖИМА
+    # =============================================================================
     def settings_page():
         return ft.Container(
             content=ft.Column(
