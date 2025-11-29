@@ -1,0 +1,42 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run Python File",
+      "type": "shell",
+      "command": "/usr/bin/python3",
+      "args": [
+        "-B",
+        "${file}"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": [],
+      "options": {
+        "env": {
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "PYTHONUNBUFFERED": "1"
+        }
+      }
+    },
+    {
+      "label": "Clear Cache & Run",
+      "type": "shell",
+      "command": "find ${workspaceFolder} -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true; /usr/bin/python3 -B ${file}",
+      "group": {
+        "kind": "build"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

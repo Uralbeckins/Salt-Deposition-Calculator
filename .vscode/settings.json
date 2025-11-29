@@ -1,0 +1,14 @@
+{
+  "python.linting.enabled": true,
+  "python.formatting.provider": "black",
+  "[python]": {
+    "editor.formatOnSave": true,
+    "editor.rulers": [88]
+  },
+  "python.analysis.extraPaths": [],
+  "python.terminal.executeInFileDir": true,
+  "python.terminal.focusAfterLaunch": true,
+  "python.createEnvironment.trigger": "off",
+  "PYTHONUNBUFFERED": "1",
+  "PYTHONDONTWRITEBYTECODE": "1"
+}

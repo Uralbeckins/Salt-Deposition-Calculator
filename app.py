@@ -235,20 +235,23 @@ def calculate_masses(c, T, P, pH, GF, Q, water_c, y_CO2, X_CO2, Mroil, dens_oil,
 
     # Перевод осаждённых количеств в г/л
     masses = {}
+    si_res = {}
     sum_masses = 0
 
     for s in precip:
         mr = 100.087 if s == 'Кальцит' else salts[s]['Mr']
         masses[s] = round(precip[s] * mr, 3)
+        si_res[s] = format(precip[s], '.3e')
         sum_masses += masses[s]
-
     # Добавляем нули для солей, которых нет в осадках
     for key in ['Кальцит', *salts.keys()]:
+        si_res.setdefault(key, 0.0)
         masses.setdefault(key, 0.0)
 
     masses['Общая масса солей'] = round(sum_masses, 4)
-
-    return masses
+    si_res['Общая масса солей'] = '-'
+    
+    return masses, si_res
 
 
 DOWNLOADS_DIR = os.path.join(os.path.expanduser("~"), "Downloads")
@@ -389,7 +392,7 @@ def main(page: ft.Page):
             c = ions
 
             # --- Расчет масс осадков ---
-            masses = calculate_masses(c, T, P, pH, GF, Q, water_c, y_CO2, X_CO2, Mroil, dens_oil)
+            masses, si_res = calculate_masses(c, T, P, pH, GF, Q, water_c, y_CO2, X_CO2, Mroil, dens_oil)
 
             # --- Отображение результатов ---
             results_column.controls.clear()
@@ -419,9 +422,10 @@ def main(page: ft.Page):
             if table is None:
                 columns = [
                     ft.DataColumn(ft.Text('Вещество')),
-                    ft.DataColumn(ft.Text('Масса, г/л'))
+                    ft.DataColumn(ft.Text('Масса, г/л')),
+                    ft.DataColumn(ft.Text('Индекс насыщения'))
                 ]
-                rows = [ft.DataRow([ft.DataCell(ft.Text(salt)), ft.DataCell(ft.Text(format_display(masses[salt])))])
+                rows = [ft.DataRow([ft.DataCell(ft.Text(salt)), ft.DataCell(ft.Text(format_display(masses[salt]))), ft.DataCell(ft.Text(format_display(si_res[salt])))])
                     for salt in ['Кальцит', 'Барит', 'Целестин', 'Ангидрит', 'Бассанит', 'Гипс', 'Общая масса солей']]
                 table = ft.DataTable(
                     columns=columns,
@@ -434,7 +438,7 @@ def main(page: ft.Page):
                     sort_ascending=True
                 )
             else:
-                table.rows = [ft.DataRow([ft.DataCell(ft.Text(salt)), ft.DataCell(ft.Text(format_display(masses[salt])))])
+                table.rows = [ft.DataRow([ft.DataCell(ft.Text(salt)), ft.DataCell(ft.Text(format_display(masses[salt]))), ft.DataCell(ft.Text(format_display(si_res[salt])))])
                               for salt in ['Кальцит', 'Барит', 'Целестин', 'Ангидрит', 'Бассанит', 'Гипс', 'Общая масса солей']]
 
             table_container = ft.Container(content=table, padding=10, alignment=ft.alignment.top_left)
@@ -461,9 +465,9 @@ def main(page: ft.Page):
         else:
             page.theme_mode = ft.ThemeMode.LIGHT
             theme_btn.icon = ft.Icons.DARK_MODE
-            nav_bar.bgcolor=ft.Colors.LIGHT_BLUE_200
-            nav_bar.inactive_color=ft.Colors.GREY_700
-            nav_bar.active_color=ft.Colors.BLUE_800
+            nav_bar.bgcolor = ft.Colors.LIGHT_BLUE_300
+            nav_bar.inactive_color = ft.Colors.GREY_700
+            nav_bar.active_color = ft.Colors.BLUE_800
 
         page.update()
 
@@ -584,91 +588,7 @@ def main(page: ft.Page):
         )
     )
 
-    # =============================================================================
-    # ФУНКЦИЯ ДЛЯ ОТОБРАЖЕНИЯ ПРЕДПРОСМОТРА РЕЗУЛЬТАТОВ В ВИДЕ ТАБЛИЦЫ
-    # =============================================================================
-    def show_result_preview(df_results):
-        nonlocal preview_container
-
-        # Формируем DataTable
-        columns = [ft.DataColumn(ft.Container(content=ft.Text(col), alignment=ft.alignment.center, expand=True)) for col in df_results.columns]
-        rows = []
-        for _, row in df_results.iterrows():
-            row_cells = []
-            for col in df_results.columns:
-                try:
-                    val = row[col]
-                    if pd.isna(val):
-                        display = ''
-                    else:
-                        # If numeric zero, display as integer zero
-                        if isinstance(val, float) and val == 0.0:
-                            display = '0'
-                        elif col == '№' or col == 'Скважина':
-                            try:
-                                display = str(int(val))
-                            except Exception:
-                                display = str(val)
-                        else:
-                            display = str(val)
-                except Exception:
-                    display = str(row.get(col, ''))
-                # Center the cell content
-                row_cells.append(ft.DataCell(ft.Container(content=ft.Text(display), alignment=ft.alignment.center, expand=True)))
-            rows.append(ft.DataRow(cells=row_cells))
-
-        table = ft.DataTable(
-            columns=columns,
-            rows=rows,
-            border=ft.border.all(1),
-            border_radius=4,
-            horizontal_lines=ft.border.BorderSide(1, ft.Colors.BLACK),
-            vertical_lines=ft.border.BorderSide(1, ft.Colors.BLACK),
-            column_spacing=20,
-        )
-
-        preview_container.content = ft.Container(
-            ft.Column([
-                ft.Text('Результаты по скважинам, г/л', size=22, weight=ft.FontWeight.BOLD),
-                table
-            ], horizontal_alignment=ft.CrossAxisAlignment.START, scroll=ft.ScrollMode.ALWAYS)
-        )
-
-        # Сбрасываем оформление контейнера
-        preview_container.border = None
-        preview_container.border_radius = 0
-        preview_container.alignment = None
-        preview_container.width = None
-        preview_container.height = None
-
-        page.update()
-        page.open(ft.SnackBar(ft.Text(f"* Ваш файл появился в папке \"Загрузки\""), bgcolor=ft.Colors.GREEN, duration=20000))
-
-    # =========================================================================
-    # СБРОС КОНТЕЙНЕРА ПРЕДПРОСМОТРА
-    # =========================================================================
-    def clear_all(e):
-        preview_container.content = ft.Text(
-            "Здесь появится таблица c результатами расчета",
-            size=20,
-            color=ft.Colors.GREY
-        )
-        preview_container.border = ft.border.all(1, ft.Colors.GREY)
-        preview_container.border_radius = 30
-        preview_container.alignment = ft.alignment.center
-        preview_container.width = 1200
-        preview_container.height = 400
-
-        calculate_excel_btn.disabled = True
-        calculate_excel_btn.style=ft.ButtonStyle(
-                    color=ft.Colors.WHITE,
-                    bgcolor=ft.Colors.GREY
-                )
-
-        results_column.controls.clear()
-
-        page.update()
-
+    
     preview_container=ft.Container(
                         content=ft.Text("Здесь появится таблица c результатами расчета", size=20, color=ft.Colors.GREY),
                         width=1200,
@@ -723,10 +643,18 @@ def main(page: ft.Page):
                     X_CO2 = row.get("Мольная доля CO₂ в пл. нефти", 0)
 
                     # Рассчет масс осадков
-                    masses = calculate_masses(ions, T, P, pH, GF, Q, water_c, y_CO2, X_CO2, Mroil, dens_oil)
+                    masses, si_res = calculate_masses(ions, T, P, pH, GF, Q, water_c, y_CO2, X_CO2, Mroil, dens_oil)
 
-                    # Добавляем в результаты
-                    results.append({**row.to_dict(), **masses})
+                    # Добавляем в результаты с префиксами для разделения
+                    result_row = row.to_dict()
+                    for salt, mass in masses.items():
+                        result_row[f"{salt}, г/л"] = mass
+                    for salt, si in si_res.items():
+                        # Не добавляем колонку SI для общей строки с суммой масс
+                        if salt == 'Общая масса солей':
+                            continue
+                        result_row[f"SI_{salt}"] = si
+                    results.append(result_row)
 
                 # Сохраняем результаты
                 result_df = pd.DataFrame(results)
@@ -737,9 +665,7 @@ def main(page: ft.Page):
 
                 # Защита от нажатия, если нет результатов
                 if result_df is not None:
-                    calculate_excel_btn.on_click = lambda _, df=result_df: show_result_preview(df[['№', 'Скважина','Кальцит', 'Барит',
-                                                        'Целестин', 'Ангидрит', 'Бассанит', 'Гипс',
-                                                        'Общая масса солей']])
+                    calculate_excel_btn.on_click = lambda _, df=result_df: show_result_preview(df)
                 else:
                     calculate_excel_btn.on_click = None
                 
@@ -750,8 +676,84 @@ def main(page: ft.Page):
                 page.update()
 
     file_picker.on_result = process_file
-    
-    # Функция для отображения предпросмотра импортированного Excel файла
+
+    # =============================================================================
+    # ФУНКЦИЯ ДЛЯ ОТОБРАЖЕНИЯ ПРЕДПРОСМОТРА РЕЗУЛЬТАТОВ В ВИДЕ ТАБЛИЦЫ
+    # =============================================================================
+    def show_result_preview(df_results):
+        nonlocal preview_container
+
+        # Выбираем колонки: №, Скважина, Masses и SI values
+        columns_to_show = ['№', 'Скважина']
+        
+        # Добавляем колонки масс
+        mass_columns = [col for col in df_results.columns if col.endswith(', г/л')]
+        columns_to_show.extend(mass_columns)
+        
+        # Добавляем колонки SI
+        si_columns = [col for col in df_results.columns if col.startswith('SI_')]
+        columns_to_show.extend(si_columns)
+        
+        # Фильтруем DataFrame
+        df_display = df_results[columns_to_show]
+
+        # Формируем DataTable
+        columns = [ft.DataColumn(ft.Container(content=ft.Text(col, size=14), alignment=ft.alignment.center, expand=True)) for col in df_display.columns]
+        rows = []
+        for _, row in df_display.iterrows():
+            row_cells = []
+            for col in df_display.columns:
+                try:
+                    val = row[col]
+                    if pd.isna(val):
+                        display = ''
+                    else:
+                        # If numeric zero, display as integer zero
+                        if isinstance(val, float) and val == 0.0:
+                            display = '0'
+                        elif col in ['№', 'Скважина']:
+                            try:
+                                display = str(int(val))
+                            except Exception:
+                                display = str(val)
+                        else:
+                            display = str(val)
+                except Exception:
+                    display = str(row.get(col, ''))
+                # Center the cell content
+                row_cells.append(ft.DataCell(ft.Container(content=ft.Text(display, size=14), alignment=ft.alignment.center, expand=True)))
+            rows.append(ft.DataRow(cells=row_cells))
+
+        table = ft.DataTable(
+            columns=columns,
+            rows=rows,
+            border=ft.border.all(1),
+            border_radius=4,
+            horizontal_lines=ft.border.BorderSide(1, ft.Colors.BLACK),
+            vertical_lines=ft.border.BorderSide(1, ft.Colors.BLACK),
+            column_spacing=15,
+        )
+
+        preview_container.content = ft.Container(
+            ft.Column([
+                ft.Text('Результаты расчета', size=22, weight=ft.FontWeight.BOLD),
+                ft.Row([table], scroll=ft.ScrollMode.ALWAYS)
+            ], horizontal_alignment=ft.CrossAxisAlignment.START, scroll=ft.ScrollMode.ALWAYS)
+        )
+
+        # Сбрасываем оформление контейнера
+        preview_container.border = None
+        preview_container.border_radius = 0
+        preview_container.alignment = None
+        preview_container.width = None
+        preview_container.height = None
+
+        page.update()
+        page.open(ft.SnackBar(ft.Text(f"* Ваш файл появился в папке \"Загрузки\""), bgcolor=ft.Colors.GREEN, duration=20000))
+
+    # ============================================================================
+    # ФУНКЦИЯ ДЛЯ ОТОБРАЖЕНИЯ ПРЕДПРОСМОТРА ИМПОРТИРОВАННОГО EXCEL
+    # ============================================================================
     def show_preview_excel(df: pd.DataFrame):
         # Берем первые 5 строк
         num_rows = max(1, 5)
@@ -884,7 +886,32 @@ def main(page: ft.Page):
             expand=True,
             padding=10
         )
+    
+    # =========================================================================
+    # СБРОС КОНТЕЙНЕРА ПРЕДПРОСМОТРА
+    # =========================================================================
+    def clear_all(e):
+        preview_container.content = ft.Text(
+            "Здесь появится таблица c результатами расчета",
+            size=20,
+            color=ft.Colors.GREY
+        )
+        preview_container.border = ft.border.all(1, ft.Colors.GREY)
+        preview_container.border_radius = 30
+        preview_container.alignment = ft.alignment.center
+        preview_container.width = 1200
+        preview_container.height = 400
 
+        calculate_excel_btn.disabled = True
+        calculate_excel_btn.style=ft.ButtonStyle(
+                    color=ft.Colors.WHITE,
+                    bgcolor=ft.Colors.GREY
+                )
+
+        results_column.controls.clear()
+
+        page.update()
+    # =============================================================================
     # --- Основной контейнер для контента страниц ---
     content = ft.Container(expand=True)
 
@@ -900,8 +927,8 @@ def main(page: ft.Page):
     # --- Панель навигации ---
     nav_bar = ft.CupertinoNavigationBar(
         bgcolor=ft.Colors.BLUE_GREY_900,
-        inactive_color=ft.Colors.GREY_500,
-        active_color=ft.Colors.BLUE_300,
+        inactive_color=ft.Colors.GREY_600,
+        active_color=ft.Colors.BLUE_400,
         on_change=on_tab_change,
         destinations=[
             ft.NavigationBarDestination(icon=ft.Icons.EDIT_OUTLINED, label="Ручной ввод"),
