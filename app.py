@@ -79,8 +79,10 @@ def calc_SI_calcite(c, T, P, pH, GF, Q, water_c, y_CO2, X_CO2, Mroil, dens_oil):
         BOPD = Qj * (100 - wc) / 100 * 6.28981
         MMCFD = Qj * (100 - wc) / 100 * GF * 35.3147 / 1e6
 
-        tb05, pb05 = TB**0.5, PB**0.5
-        fCO2 = math.exp(-7.66e-4 + 8.0e-6 * tb05 - 2.11e-9 * tb05 * pb05)
+        TB05, PB05 = TB**0.5, PB**0.5
+        fCO2 = math.exp((-7.66e-3 + 8.0e-4 * TB05 - 2.11e-5 * TB) * PB05 + \
+                        (-5.77e-4 + 3.72e-5 * TB05 - 5.7e-7 * TB) * PB + \
+                        (4.4e-6 - 2.96e-7 * TB05 + 5.1e-9 * TB05) * PB ** 1.5)
 
         denom = 1 + PB * fCO2 * (5*BWPD + 10*BOPD) * 1e-9 / ((TB + 460) * max(MMCFD, 1e-12))
         yCO2 = yCO2_prime / denom if denom != 0 else yCO2_prime
@@ -95,12 +97,12 @@ def calc_SI_calcite(c, T, P, pH, GF, Q, water_c, y_CO2, X_CO2, Mroil, dens_oil):
         Qj, wc, XCO2, Mroil, rhooil = float(Q), float(water_c), float(X_CO2), float(Mroil), float(dens_oil)
         Vw = Qj * wc / 100 * 1000
         Vo = Qj * (100 - wc) / 100 * 1000
-        nCO2 = Vo * rhooil * 1000 / Mroil * XCO2 if Mroil != 0 else 0
+        nCO2 = Vo * rhooil / Mroil * XCO2 if Mroil != 0 else 0
         cCO2 = 7289 * nCO2 / (Vw + 3.04 * Vo) if (Vw + 3.04 * Vo) != 0 else 1e-12
 
         return math.log10(max(c.get('Ca', 0) * c.get('HCO3', 0), 1e-30) / cCO2) + \
-               3.801 + 0.008115 * T - 9.028e-6 * T**2 - 7.419e-5 * P - \
-               1.961 * I**0.5 + 0.695 * I - 0.01136 * I**1.5 - 1.604e-5 * T * I**0.5
+               3.801 + 0.008115 * TB - 9.028e-6 * TB**2 - 7.419e-5 * PB - \
+               1.961 * I**0.5 + 0.695 * I - 0.01136 * I**1.5 - 1.604e-5 * TB * I**0.5
 
     # Расчёт по упрощённой формуле при недостатке информации
     if no_info == True:
