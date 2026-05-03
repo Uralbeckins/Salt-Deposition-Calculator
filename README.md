@@ -73,5 +73,7 @@ python app.py
 
 ## 📌 Лицензия
 
+Свидетельство о регистрации программы (см. `Docs/Патент программы`)
+
 MIT License © Uralbeckins Corporation
 All Rights Reserved
