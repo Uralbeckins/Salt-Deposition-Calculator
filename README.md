@@ -20,15 +20,11 @@
 
 ## 📸 Использование
 
-![Главный экран](Screenshots/1.jpeg)
-
-![Ввод данных](Screenshots/2.jpeg)
-
-![Результаты расчета](Screenshots/3.jpeg)
-
-![Графики](Screenshots/4.jpeg)
-
-![Экспорт данных](Screenshots/5.jpeg)
+<img src="Screenshots/1.jpeg" width="700" />
+<img src="Screenshots/2.jpeg" width="700" />
+<img src="Screenshots/3.jpeg" width="700" />
+<img src="Screenshots/4.jpeg" width="700" />
+<img src="Screenshots/5.jpeg" width="700" />
 
 ### Входные данные
 
